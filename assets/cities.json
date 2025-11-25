@@ -1,0 +1,49 @@
+{
+  "cities": [
+    {
+      "code": 34,
+      "name": "İstanbul",
+      "districts": [
+        { "code": 1, "name": "Adalar" },
+        { "code": 2, "name": "Arnavutköy" },
+        { "code": 3, "name": "Ataşehir" },
+        { "code": 4, "name": "Avcılar" },
+        { "code": 5, "name": "Bağcılar" },
+        { "code": 6, "name": "Bahçelievler" },
+        { "code": 7, "name": "Bakırköy" },
+        { "code": 8, "name": "Başakşehir" },
+        { "code": 9, "name": "Bayrampaşa" },
+        { "code": 10, "name": "Beşiktaş" },
+        { "code": 11, "name": "Beykoz" },
+        { "code": 12, "name": "Beylikdüzü" },
+        { "code": 13, "name": "Beyoğlu" },
+        { "code": 14, "name": "Büyükçekmece" },
+        { "code": 15, "name": "Çatalca" },
+        { "code": 16, "name": "Çekmeköy" },
+        { "code": 17, "name": "Esenler" },
+        { "code": 18, "name": "Esenyurt" },
+        { "code": 19, "name": "Eyüpsultan" },
+        { "code": 20, "name": "Fatih" },
+        { "code": 21, "name": "Gaziosmanpaşa" },
+        { "code": 22, "name": "Güngören" },
+        { "code": 23, "name": "Kadıköy" },
+        { "code": 24, "name": "Kağıthane" },
+        { "code": 25, "name": "Kartal" },
+        { "code": 26, "name": "Küçükçekmece" },
+        { "code": 27, "name": "Maltepe" },
+        { "code": 28, "name": "Pendik" },
+        { "code": 29, "name": "Sancaktepe" },
+        { "code": 30, "name": "Sarıyer" },
+        { "code": 31, "name": "Silivri" },
+        { "code": 32, "name": "Sultanbeyli" },
+        { "code": 33, "name": "Sultangazi" },
+        { "code": 34, "name": "Şile" },
+        { "code": 35, "name": "Şişli" },
+        { "code": 36, "name": "Tuzla" },
+        { "code": 37, "name": "Ümraniye" },
+        { "code": 38, "name": "Üsküdar" },
+        { "code": 39, "name": "Zeytinburnu" }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/auth_service.dart' hide FirebaseAuthException;
+import '../services/auth_service.dart';
+import 'home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -23,7 +24,15 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final credential = await _authService.signInWithGoogle();
       if (credential != null && mounted) {
-        Navigator.pushReplacementNamed(context, '/dashboard');
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const HomePage(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+          ),
+        );
       }
     } catch (e) {
       setState(() {
@@ -63,7 +72,7 @@ class _LoginPageState extends State<LoginPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Business Login',
+                'İşletme Girişi',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -74,7 +83,7 @@ class _LoginPageState extends State<LoginPage> {
               ElevatedButton.icon(
                 onPressed: _isLoading ? null : _handleGoogleSignIn,
                 icon: const Icon(Icons.login),
-                label: const Text('Sign in with Google'),
+                label: const Text('Google ile Oturum Aç'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(16),
                 ),

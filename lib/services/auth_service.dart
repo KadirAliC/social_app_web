@@ -7,13 +7,11 @@ class AuthService {
 
   Future<UserCredential?> signInWithGoogle() async {
     try {
-      // Create a new provider
       GoogleAuthProvider googleProvider = GoogleAuthProvider();
 
       googleProvider.addScope('email');
       googleProvider.addScope('profile');
 
-      // Once signed in, return the UserCredential
       final UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
       final user = userCredential.user;
 
