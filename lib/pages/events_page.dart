@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:html' as html;
+import 'package:universal_html/html.dart' as html;
 import '../models/event.dart';
 import '../models/business.dart';
 

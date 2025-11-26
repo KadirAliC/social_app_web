@@ -35,22 +35,40 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } catch (e) {
-      setState(() {
-        if (e is FirebaseAuthException) {
-          switch (e.code) {
-            case 'invalid-credential':
-              _errorMessage = 'Kimlik doğrulama başarısız oldu. Lütfen tekrar deneyin.';
-              break;
-            case 'user-not-found':
-              _errorMessage = 'Kullanıcı bulunamadı.';
-              break;
-            default:
-              _errorMessage = 'Bir hata oluştu: ${e.message}';
-          }
-        } else {
-          _errorMessage = 'Giriş yapılırken bir hata oluştu: $e';
+      if (e.toString().contains('NOT_ALLOWED')) {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Yetkisiz Giriş'),
+              content: const Text('Sisteme giriş yapabilmek için sistem yöneticisinin onayı gerekmektedir.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Tamam'),
+                ),
+              ],
+            ),
+          );
         }
-      });
+      } else {
+        setState(() {
+          if (e is FirebaseAuthException) {
+            switch (e.code) {
+              case 'invalid-credential':
+                _errorMessage = 'Kimlik doğrulama başarısız oldu. Lütfen tekrar deneyin.';
+                break;
+              case 'user-not-found':
+                _errorMessage = 'Kullanıcı bulunamadı.';
+                break;
+              default:
+                _errorMessage = 'Bir hata oluştu: ${e.message}';
+            }
+          } else {
+            _errorMessage = 'Giriş yapılırken bir hata oluştu: $e';
+          }
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {

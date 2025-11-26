@@ -22,6 +22,7 @@ dependencies:
   google_sign_in_web: ^0.12.1
   google_maps_flutter: ^2.5.0
   google_maps_flutter_web: ^0.5.4
+  universal_html: ^2.3.0
 
 dev_dependencies:
   flutter_test:
