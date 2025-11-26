@@ -21,6 +21,8 @@ class _HomePageState extends State<HomePage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _capacityController = TextEditingController();
+  final _mobilePhoneController = TextEditingController();
+  final _landlinePhoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _addressDescriptionController = TextEditingController();
   String? _selectedCity;
@@ -70,6 +72,8 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _nameController.addListener(_checkForChanges);
     _capacityController.addListener(_checkForChanges);
+    _mobilePhoneController.addListener(_checkForChanges);
+    _landlinePhoneController.addListener(_checkForChanges);
     _addressController.addListener(_checkForChanges);
     _addressDescriptionController.addListener(_checkForChanges);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -82,6 +86,8 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _nameController.removeListener(_checkForChanges);
     _capacityController.removeListener(_checkForChanges);
+    _mobilePhoneController.removeListener(_checkForChanges);
+    _landlinePhoneController.removeListener(_checkForChanges);
     _addressController.removeListener(_checkForChanges);
     _addressDescriptionController.removeListener(_checkForChanges);
     _hasChangesNotifier.dispose();
@@ -89,6 +95,8 @@ class _HomePageState extends State<HomePage> {
     _imageNotifier.dispose();
     _nameController.dispose();
     _capacityController.dispose();
+    _mobilePhoneController.dispose();
+    _landlinePhoneController.dispose();
     _addressController.dispose();
     _addressDescriptionController.dispose();
     super.dispose();
@@ -110,6 +118,8 @@ class _HomePageState extends State<HomePage> {
         final business = Business.fromMap(doc.data()!, doc.id);
         _nameController.text = business.name;
         _capacityController.text = business.capacity?.toString() ?? '';
+        _mobilePhoneController.text = business.mobilePhone ?? '';
+        _landlinePhoneController.text = business.landlinePhone ?? '';
         _addressController.text = business.address ?? '';
         _addressDescriptionController.text = business.addressDescription ?? '';
         _imagePath = business.imagePath;
@@ -175,6 +185,8 @@ class _HomePageState extends State<HomePage> {
         _nameController.text != _originalBusiness!.name ||
         _capacityController.text !=
             (_originalBusiness!.capacity?.toString() ?? '') ||
+        _mobilePhoneController.text != (_originalBusiness!.mobilePhone ?? '') ||
+        _landlinePhoneController.text != (_originalBusiness!.landlinePhone ?? '') ||
         _addressDescriptionController.text !=
             (_originalBusiness!.addressDescription ?? '') ||
         _imagePath != _originalBusiness!.imagePath ||
@@ -199,6 +211,8 @@ class _HomePageState extends State<HomePage> {
         id: userId,
         name: _nameController.text,
         capacity: int.tryParse(_capacityController.text),
+        mobilePhone: _mobilePhoneController.text,
+        landlinePhone: _landlinePhoneController.text,
         email: _originalBusiness?.email ?? '',
         imagePath: _imagePath,
         address: _addressController.text,
@@ -233,7 +247,13 @@ class _HomePageState extends State<HomePage> {
 
     switch (_selectedIndex) {
       case 1:
-        return const EventsPage();
+        return EventsPage(
+          onRequireBusinessInfo: () {
+            setState(() {
+              _selectedIndex = 0;
+            });
+          },
+        );
       case 0:
         return SingleChildScrollView(
           child: Center(
@@ -344,6 +364,46 @@ class _HomePageState extends State<HomePage> {
                                 border: OutlineInputBorder(),
                               ),
                               keyboardType: TextInputType.number,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _mobilePhoneController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Cep Telefonu',
+                                      hintText: '05XX XXX XXXX',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.phone_android),
+                                      counterText: '',
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    inputFormatters: [
+                                      PhoneNumberFormatter(),
+                                    ],
+                                    maxLength: 13,
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _landlinePhoneController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Sabit Hat',
+                                      hintText: '0XXX XXX XXXX',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.phone),
+                                      counterText: '',
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    inputFormatters: [
+                                      PhoneNumberFormatter(),
+                                    ],
+                                    maxLength: 13,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -525,7 +585,7 @@ class _HomePageState extends State<HomePage> {
       body: Row(
         children: [
           if (!isSmallScreen)
-            SizedBox(width: 250, child: _buildDrawerContents(context)),
+            SizedBox(width: 325, child: _buildDrawerContents(context)),
           Expanded(
             child: Container(
               color: Colors.grey[100],
@@ -569,13 +629,12 @@ class _HomePageState extends State<HomePage> {
                       : const Icon(Icons.person, size: 35),
                 ),
               ),
-              const SizedBox(height: 10),
-              ValueListenableBuilder<Business?>(
-                valueListenable: ValueNotifier<Business?>(_originalBusiness),
-                builder: (context, business, _) => Text(
-                  business?.name ?? 'Menü',
-                  style: const TextStyle(color: Colors.white, fontSize: 24),
-                ),
+              const SizedBox(height: 8),
+              Text(
+                _originalBusiness?.name ?? 'Menü',
+                style: const TextStyle(color: Colors.white, fontSize: 24),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -619,6 +678,37 @@ class _HomePageState extends State<HomePage> {
           },
         ),
       ],
+    );
+  }
+}
+
+class PhoneNumberFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final text = newValue.text;
+    
+    String digits = text.replaceAll(RegExp(r'\D'), '');
+    
+    if (digits.length > 11) {
+      digits = digits.substring(0, 11);
+    }
+    
+    final buffer = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i == 4 || i == 7) {
+        buffer.write(' ');
+      }
+      buffer.write(digits[i]);
+    }
+    
+    final formatted = buffer.toString();
+    
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }

@@ -5,12 +5,14 @@ class EventMaster {
   final String businessId;
   final DateTime createDate;
   final DateTime eventDate;
+  final String? eventTime;
 
   EventMaster({
     required this.id,
     required this.businessId,
     required this.createDate,
     required this.eventDate,
+    this.eventTime,
   });
 
   factory EventMaster.fromMap(Map<String, dynamic> map, String id) {
@@ -19,6 +21,7 @@ class EventMaster {
       businessId: map['business_id'] ?? '',
       createDate: (map['event_create_date'] as Timestamp).toDate(),
       eventDate: (map['event_date'] as Timestamp).toDate(),
+      eventTime: map['event_time'],
     );
   }
 
@@ -27,6 +30,7 @@ class EventMaster {
       'business_id': businessId,
       'event_create_date': createDate,
       'event_date': eventDate,
+      'event_time': eventTime,
     };
   }
 }

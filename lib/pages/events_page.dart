@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:html' as html;
 import '../models/event.dart';
+import '../models/business.dart';
 
 class EventsPage extends StatefulWidget {
-  const EventsPage({super.key});
+  final VoidCallback? onRequireBusinessInfo;
+
+  const EventsPage({
+    super.key,
+    this.onRequireBusinessInfo,
+  });
 
   @override
   State<EventsPage> createState() => _EventsPageState();
@@ -17,6 +24,7 @@ class _EventsPageState extends State<EventsPage> {
   final _editDescriptionController = TextEditingController();
   final _editDiscountRateController = TextEditingController();
   DateTime _editSelectedDate = DateTime.now();
+  TimeOfDay? _editSelectedTime;
   String? _editImageBase64;
   bool _isEditing = false;
   final _formKey = GlobalKey<FormState>();
@@ -26,12 +34,72 @@ class _EventsPageState extends State<EventsPage> {
   final _districtCodeController = TextEditingController();
   final _discountRateController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
+  TimeOfDay? _selectedTime;
   String? _imageBase64;
   bool _isSaving = false;
   final List<Event> _events = [];
   bool _isLoading = true;
   Event? _selectedEvent;
+  bool _isBusinessInfoValid = true;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadEvents();
+    _checkBusinessInfo();
+  }
+
+  Future<void> _checkBusinessInfo() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('businesses')
+          .doc(userId)
+          .get();
+
+      if (doc.exists) {
+        final business = Business.fromMap(doc.data()!, doc.id);
+        
+        final isValid = business.name.isNotEmpty &&
+            business.cityName != null &&
+            business.cityName!.isNotEmpty &&
+            business.districtName != null &&
+            business.districtName!.isNotEmpty;
+
+        if (mounted) {
+          setState(() {
+            _isBusinessInfoValid = isValid;
+          });
+
+          if (!isValid) {
+            await showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AlertDialog(
+                title: const Text('Eksik Bilgi'),
+                content: const Text(
+                  'Etkinlik girişi yapabilmek için İşletme Adı, Şehir ve İlçe bilgisi gibi zorunlu alanların doldurulmuş olması gerekmektedir.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      widget.onRequireBusinessInfo?.call();
+                    },
+                    child: const Text('Tamam'),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      print('Business info check failed: $e');
+    }
+  }
   void _showDetailDialog(Event event) {
     showDialog(
       context: context,
@@ -63,7 +131,7 @@ class _EventsPageState extends State<EventsPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tarih: ${event.master.eventDate.day}/${event.master.eventDate.month}/${event.master.eventDate.year}',
+                  'Tarih: ${event.master.eventDate.day}/${event.master.eventDate.month}/${event.master.eventDate.year}${event.master.eventTime != null ? ' ${event.master.eventTime}' : ''}',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 16),
@@ -96,12 +164,20 @@ class _EventsPageState extends State<EventsPage> {
   }
 
   Future<void> _showEditDialog(Event event) async {
-    // Form kontrolcülerini mevcut değerlerle doldur
     _editTitleController.text = event.detail.title;
     _editDescriptionController.text = event.detail.description;
     _editDiscountRateController.text = (event.detail.discountRate * 100).toString();
     _editSelectedDate = event.master.eventDate;
     _editImageBase64 = event.detail.imageBase64;
+
+    if (event.master.eventTime != null) {
+      final parts = event.master.eventTime!.split(':');
+      if (parts.length == 2) {
+        _editSelectedTime = TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+      }
+    } else {
+      _editSelectedTime = null;
+    }
 
     final result = await showDialog<bool>(
       context: context,
@@ -228,11 +304,12 @@ class _EventsPageState extends State<EventsPage> {
                             border: OutlineInputBorder(),
                           ),
                           keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                           validator: (value) {
                             if (value?.isEmpty ?? true) {
                               return 'İndirim oranı zorunludur';
                             }
-                            final rate = double.tryParse(value!);
+                            final rate = int.tryParse(value!);
                             if (rate == null || rate < 0 || rate > 100) {
                               return 'Geçerli bir oran giriniz (0-100)';
                             }
@@ -265,6 +342,37 @@ class _EventsPageState extends State<EventsPage> {
                           ),
                         ),
                       ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () async {
+                            final picked = await showTimePicker(
+                              context: context,
+                              initialTime: _editSelectedTime ?? TimeOfDay.now(),
+                            );
+                            if (picked != null) {
+                              setState(() => _editSelectedTime = picked);
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Etkinlik Saati (Opsiyonel)',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: _editSelectedTime != null
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () => setState(() => _editSelectedTime = null),
+                                    )
+                                  : null,
+                            ),
+                            child: Text(
+                              _editSelectedTime != null
+                                  ? '${_editSelectedTime!.hour.toString().padLeft(2, '0')}:${_editSelectedTime!.minute.toString().padLeft(2, '0')}'
+                                  : 'Seçiniz',
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -283,15 +391,16 @@ class _EventsPageState extends State<EventsPage> {
                                 if (_editFormKey.currentState!.validate()) {
                                   setState(() => _isEditing = true);
                                   try {
-                                    // Master kaydını güncelle
                                     await FirebaseFirestore.instance
                                         .collection('event_master')
                                         .doc(event.master.id)
                                         .update({
                                       'event_date': _editSelectedDate,
+                                      'event_time': _editSelectedTime != null 
+                                          ? '${_editSelectedTime!.hour.toString().padLeft(2, '0')}:${_editSelectedTime!.minute.toString().padLeft(2, '0')}' 
+                                          : null,
                                     });
 
-                                    // Detail kaydını güncelle
                                     await FirebaseFirestore.instance
                                         .collection('event_detail')
                                         .doc(event.detail.id)
@@ -334,7 +443,7 @@ class _EventsPageState extends State<EventsPage> {
     );
 
     if (result == true) {
-      _loadEvents(); // Listeyi yenile
+      _loadEvents();
     }
   }
 
@@ -351,11 +460,6 @@ class _EventsPageState extends State<EventsPage> {
     super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadEvents();
-  }
 
   Future<void> _uploadEventImage() async {
     final input = html.FileUploadInputElement()..accept = 'image/*';
@@ -408,16 +512,17 @@ class _EventsPageState extends State<EventsPage> {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
-      // Önce master kaydı oluştur
       final masterRef = await FirebaseFirestore.instance
           .collection('event_master')
           .add({
         'business_id': userId,
         'event_create_date': DateTime.now(),
         'event_date': _selectedDate,
+        'event_time': _selectedTime != null 
+            ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}' 
+            : null,
       });
 
-      // Sonra detail kaydı oluştur
       await FirebaseFirestore.instance
           .collection('event_detail')
           .add({
@@ -431,7 +536,6 @@ class _EventsPageState extends State<EventsPage> {
       });
 
       if (mounted) {
-        // Formları temizle
         _titleController.clear();
         _descriptionController.clear();
         _cityCodeController.clear();
@@ -440,14 +544,13 @@ class _EventsPageState extends State<EventsPage> {
         setState(() {
           _imageBase64 = null;
           _selectedDate = DateTime.now();
+          _selectedTime = null;
         });
 
-        // Başarı mesajı göster
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Etkinlik başarıyla oluşturuldu')),
         );
 
-        // Etkinlik listesini yenile
         _loadEvents();
       }
     } catch (e) {
@@ -472,7 +575,6 @@ class _EventsPageState extends State<EventsPage> {
 
       print('Firestore sorgusu başlıyor... User ID: $userId');
 
-      // Önce business_id'ye göre event_master kayıtlarını al
       final masterSnapshot = await FirebaseFirestore.instance
           .collection('event_master')
           .where('business_id', isEqualTo: userId)
@@ -489,11 +591,9 @@ class _EventsPageState extends State<EventsPage> {
         return;
       }
 
-      // Tüm master ID'leri topla
       final masterIds = masterSnapshot.docs.map((doc) => doc.id).toList();
       print('Master ID listesi: $masterIds');
 
-      // event_detail kayıtlarını toplu olarak sorgula
       final detailSnapshot = await FirebaseFirestore.instance
           .collection('event_detail')
           .where('event_master_id', whereIn: masterIds)
@@ -501,20 +601,17 @@ class _EventsPageState extends State<EventsPage> {
 
       print('event_detail kayıt sayısı: ${detailSnapshot.docs.length}');
 
-      // Detail kayıtlarını master ID'ye göre map'le
       final detailMap = <String, DocumentSnapshot>{};
       for (final doc in detailSnapshot.docs) {
         final masterId = doc.data()['event_master_id'] as String;
         detailMap[masterId] = doc;
       }
 
-      // Event listesini oluştur
       final events = <Event>[];
       for (final masterDoc in masterSnapshot.docs) {
         final masterData = masterDoc.data();
         print('Master veri: $masterData');
 
-        // İlgili detail kaydını bul
         final detailDoc = detailMap[masterDoc.id];
         if (detailDoc != null) {
           final detailData = detailDoc.data() as Map<String, dynamic>;
@@ -532,7 +629,6 @@ class _EventsPageState extends State<EventsPage> {
 
       print('Toplam eşleşen etkinlik sayısı: ${events.length}');
 
-      // Tarihe göre sırala
       events.sort((a, b) => b.master.eventDate.compareTo(a.master.eventDate));
 
       if (mounted) {
@@ -561,9 +657,14 @@ class _EventsPageState extends State<EventsPage> {
       return const Center(child: CircularProgressIndicator());
     }
 
+    if (!_isBusinessInfoValid) {
+      return const Center(
+        child: Text('Etkinlik girişi yapmak için işletme bilgilerinizi tamamlayınız.'),
+      );
+    }
+
     return Row(
       children: [
-        // Sol taraf - Etkinlik listesi
         SizedBox(
           width: 300,
           child: Card(
@@ -616,7 +717,6 @@ class _EventsPageState extends State<EventsPage> {
             ),
           ),
         ),
-        // Sağ taraf - Yeni etkinlik formu
         Expanded(
           child: Card(
             margin: const EdgeInsets.all(8),
@@ -711,11 +811,12 @@ class _EventsPageState extends State<EventsPage> {
                               border: OutlineInputBorder(),
                             ),
                             keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             validator: (value) {
                               if (value?.isEmpty ?? true) {
                                 return 'İndirim oranı zorunludur';
                               }
-                              final rate = double.tryParse(value!);
+                              final rate = int.tryParse(value!);
                               if (rate == null || rate < 0 || rate > 100) {
                                 return 'Geçerli bir oran giriniz (0-100)';
                               }
@@ -734,6 +835,37 @@ class _EventsPageState extends State<EventsPage> {
                               ),
                               child: Text(
                                 '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showTimePicker(
+                                context: context,
+                                initialTime: _selectedTime ?? TimeOfDay.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => _selectedTime = picked);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Etkinlik Saati (Opsiyonel)',
+                                border: const OutlineInputBorder(),
+                                suffixIcon: _selectedTime != null
+                                    ? IconButton(
+                                        icon: const Icon(Icons.clear),
+                                        onPressed: () => setState(() => _selectedTime = null),
+                                      )
+                                    : null,
+                              ),
+                              child: Text(
+                                _selectedTime != null
+                                    ? '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}'
+                                    : 'Seçiniz',
                               ),
                             ),
                           ),

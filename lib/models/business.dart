@@ -12,6 +12,8 @@ class Business {
   double? longitude;
   String? cityName;
   String? districtName;
+  String? mobilePhone;
+  String? landlinePhone;
 
   Business({
     required this.id,
@@ -27,6 +29,8 @@ class Business {
     this.longitude,
     this.cityName,
     this.districtName,
+    this.mobilePhone,
+    this.landlinePhone,
   });
 
   Map<String, dynamic> toMap() {
@@ -44,6 +48,8 @@ class Business {
       'longitude': longitude,
       'city_name': cityName,
       'district_name': districtName,
+      'mobile_phone': mobilePhone,
+      'landline_phone': landlinePhone,
     };
   }
 
@@ -66,6 +72,8 @@ class Business {
       longitude: map['longitude'],
       cityName: map['city_name'],
       districtName: map['district_name'],
+      mobilePhone: map['mobile_phone'],
+      landlinePhone: map['landline_phone'],
     );
   }
 }
